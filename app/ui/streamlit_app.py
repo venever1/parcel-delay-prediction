@@ -42,14 +42,16 @@ KOLOM_INPUT = [
 ]
 
 
-def api_url() -> str:
+def api_url() -> str | None:
     """Ambil alamat API dari secrets atau environment variable."""
     try:
         nilai = st.secrets.get("API_URL")
     except Exception:
         nilai = None
     if not nilai:
-        nilai = os.getenv("API_URL", "http://localhost:8000")
+        nilai = os.getenv("API_URL")
+    if not nilai:
+        return None
     return str(nilai).rstrip("/")
 
 
@@ -113,15 +115,19 @@ def prediksi_lokal(payload: dict) -> dict:
 
 
 def prediksi(payload: dict, tampilkan_cadangan: bool = True) -> dict:
-    """Kirim ke API; jika gagal, jatuh ke model lokal."""
+    """Pakai API jika dikonfigurasi; jika gagal, jatuh ke model lokal."""
+    url = api_url()
+    if not url:
+        return prediksi_lokal(payload)
+
     try:
-        respons = requests.post(f"{api_url()}/predict", json=payload, timeout=10)
+        respons = requests.post(f"{url}/predict", json=payload, timeout=10)
         if respons.status_code == 200:
             return respons.json()
         return {"error": pesan_galat(respons)}
-    except requests.RequestException:
+    except (requests.RequestException, ValueError):
         if tampilkan_cadangan:
-            st.info("API tidak dapat dihubungi. Memakai model cadangan di aplikasi.")
+            st.caption("Prediksi memakai model lokal")
         return prediksi_lokal(payload)
 
 
@@ -132,6 +138,7 @@ def tampilkan_hasil(hasil: dict) -> None:
 
     probabilitas = float(hasil["probabilitas"])
     rekom = hasil["rekomendasi"]
+    st.session_state["probabilitas_mentah"] = probabilitas
     st.metric("Probabilitas terlambat", f"{probabilitas:.1%}")
     st.caption(f"Versi model: {hasil['model_version']}")
 
@@ -155,7 +162,8 @@ def nilai_csv(nilai) -> object:
 
 
 st.title("Prediksi Keterlambatan Paket")
-st.caption(f"API: {api_url()} | Model: {muat_model_cadangan()[1]['model_version']}")
+_status_api = api_url() or "tidak dikonfigurasi (mode lokal)"
+st.caption(f"API: {_status_api} | Model: {muat_model_cadangan()[1]['model_version']}")
 
 tab_satu, tab_batch = st.tabs(["Prediksi Satu Paket", "Prediksi Batch CSV"])
 
@@ -164,7 +172,7 @@ with tab_satu:
         kiri, kanan = st.columns(2)
         with kiri:
             tanggal = st.date_input("Tanggal pickup", value=date(2025, 6, 15))
-            jam = st.slider("Jam pickup", min_value=7, max_value=22, value=12)
+            jam = st.slider("Jam pickup", min_value=7, max_value=22, value=9)
             kota = st.selectbox(
                 "Kota tujuan",
                 sorted(muat_model_cadangan()[1]["fitur_kategorikal"]["kota_tujuan"]),
@@ -173,11 +181,11 @@ with tab_satu:
             transit = st.number_input("Jumlah transit", min_value=0, max_value=10, value=1)
         with kanan:
             layanan = st.selectbox("Layanan", ["REG", "EXPRESS", "HEMAT"])
-            janji = st.number_input("Janji tiba (hari)", min_value=1, max_value=14, value=2)
-            berat = st.number_input("Berat (kg)", min_value=0.0, max_value=100.0, value=1.5, step=0.1)
+            janji = st.number_input("Janji tiba (hari)", min_value=1, max_value=14, value=4)
+            berat = st.number_input("Berat (kg)", min_value=0.0, max_value=100.0, value=1.2, step=0.1)
             metode = st.selectbox("Metode bayar", ["COD", "non_COD"])
             cuaca = st.selectbox("Cuaca saat pickup", ["cerah", "berawan", "hujan", "hujan_lebat"])
-            volume = st.number_input("Volume hub hari itu", min_value=0, max_value=30000, value=5000)
+            volume = st.number_input("Volume hub hari itu", min_value=0, max_value=30000, value=4800)
 
         dikirim = st.form_submit_button("Prediksi")
 
