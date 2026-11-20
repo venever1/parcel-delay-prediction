@@ -1,28 +1,28 @@
 {
-  "model_version": "baseline-logreg-v1",
-  "model_terpilih": "Logistic Regression baseline dengan fitur asli",
+  "model_version": "engineered-lightgbm-v1-isotonic",
+  "model_terpilih": "LightGBM dengan build_features (tanpa volume_hub_hari)",
   "sumber_data": "validation 2026-01-01 sampai 2026-03-31",
-  "tanggal_kunci": "2026-11-20 22:39:48",
+  "tanggal_kunci": "2026-11-20 23:08:59",
   "kalibrasi": {
-    "metode": "tidak ada",
-    "brier_sebelum": 0.11958080614884752,
+    "metode": "isotonic",
+    "brier_sebelum": 0.15440954687546987,
     "brier_prevalensi": 0.17091701513097407,
-    "brier_sigmoid_cv5": 0.11885925368435542,
-    "brier_isotonik_cv5": 0.11831398225004486
+    "brier_sigmoid_cv5": 0.1709056839170831,
+    "brier_isotonik_cv5": 0.1467780460230499
   },
   "thresholds": {
-    "kabari_pelanggan": 0.097,
-    "prioritaskan": 0.457
+    "kabari_pelanggan": 0.205,
+    "prioritaskan": 0.24
   },
   "alasan": {
-    "kabari_pelanggan": "Biaya minimum validation Rp19,765,000; teoretis 0.0909 memberi biaya Rp20,080,000.",
-    "prioritaskan": "Precision 0.706 dengan 883 paket, memenuhi syarat precision >= 0.7 dan paket >= 100."
+    "kabari_pelanggan": "Biaya minimum validation Rp18,540,000; teoretis 0.0909 memberi biaya Rp25,870,000.",
+    "prioritaskan": "Precision 0.739 dengan 1176 paket, memenuhi syarat precision >= 0.7 dan paket >= 100."
   },
   "biaya": {
     "terlambat_tanpa_kabar": 50000,
     "kabar_keliru": 5000,
     "teoretis": 0.09090909090909091,
-    "minimum_validation": 19765000
+    "minimum_validation": 18540000
   },
   "test_disentuh": false
 }

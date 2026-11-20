@@ -19,8 +19,9 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 # atau salah input, jadi tidak dikoreksi agar tidak menebak.
 MAX_BERAT_KG = 100.0
 
-# Batas ekor distribusi volume hub. Nilai di atas ini ditandai, bukan dibuang,
-# karena bisa jadi lonjakan nyata.
+# Konstanta pembersihan domain, bukan parameter model: 9000 paket/hari dipakai
+# hanya untuk menandai ekor volume saat audit. Nilai ini tidak di-fit pada
+# validation/test dan tidak dipakai sebagai fitur model karena risiko bocor.
 VOLUME_HUB_EKSTREM = 9000
 
 # Rentang SLA yang lazim untuk tiap layanan, dipakai hanya untuk menandai.

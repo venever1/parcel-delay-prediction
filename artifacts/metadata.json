@@ -1,62 +1,34 @@
 {
-  "model_version": "baseline-logreg-v1",
-  "tipe_model": "LogisticRegression dengan fitur asli (baseline)",
-  "tanggal_latih": "2026-11-20 14:13:23",
+  "model_version": "engineered-lightgbm-v1-isotonic",
+  "tipe_model": "LightGBM dengan build_features (tanpa volume_hub_hari)",
+  "tanggal_latih": "2026-11-20 23:03:54",
   "target": "terlambat",
+  "feature_builder": "build_features_v1",
   "fitur_masukan": [
     "jam_pickup",
     "jarak_km",
     "jumlah_transit",
     "janji_hari",
     "berat_kg",
-    "volume_hub_hari",
+    "hari_dalam_minggu",
+    "is_weekend",
+    "hari_dalam_bulan",
+    "is_akhir_bulan",
+    "jarak_per_janji",
+    "jarak_per_transit",
+    "flag_jarak_missing",
+    "flag_cuaca_missing",
+    "jam_bucket",
     "kota_tujuan",
     "layanan",
     "metode_bayar",
     "cuaca_saat_pickup"
   ],
-  "fitur_numerik": [
-    "jam_pickup",
-    "jarak_km",
-    "jumlah_transit",
-    "janji_hari",
-    "berat_kg",
-    "volume_hub_hari"
+  "fitur_dikeluarkan": [
+    "volume_hub_hari",
+    "flag_volume_ekstrem"
   ],
-  "fitur_kategorikal": {
-    "kota_tujuan": [
-      "Balikpapan",
-      "Bekasi",
-      "Bogor",
-      "Cirebon",
-      "Denpasar",
-      "Jakarta",
-      "Makassar",
-      "Malang",
-      "Medan",
-      "Palembang",
-      "Pontianak",
-      "Semarang",
-      "Surabaya",
-      "Tasikmalaya",
-      "Yogyakarta"
-    ],
-    "layanan": [
-      "EXPRESS",
-      "HEMAT",
-      "REG"
-    ],
-    "metode_bayar": [
-      "COD",
-      "non_COD"
-    ],
-    "cuaca_saat_pickup": [
-      "berawan",
-      "cerah",
-      "hujan",
-      "hujan_lebat"
-    ]
-  },
+  "alasan_fitur_dikeluarkan": "Total volume harian berpotensi baru lengkap setelah pickup.",
   "split": {
     "train": {
       "sampai": "2025-12-31",
@@ -72,20 +44,39 @@
     "test": {
       "mulai": "2026-04-01",
       "sampai": "2026-06-30",
-      "baris": 6744,
-      "rasio_terlambat": 0.13923487544483987
+      "baris": 6744
     }
   },
   "thresholds": {
-    "kabari_pelanggan": 0.097,
-    "prioritaskan": 0.457
+    "kabari_pelanggan": 0.205,
+    "prioritaskan": 0.24
   },
-  "threshold_status": "placeholder; 0,09 titik impas biaya, batas prioritaskan belum dikalibrasi",
+  "threshold_status": "final; dikunci dari validation",
   "metrics": {
     "validation": {
-      "pr_auc": 0.6457529077599267,
-      "roc_auc": 0.8310291170243103,
-      "pr_auc_no_skill": 0.21878302883889475
+      "pr_auc": 0.4310073970032138,
+      "roc_auc": 0.7070083255903662,
+      "perbandingan": {
+        "Logistic Regression": {
+          "pr_auc": 0.4093340069099766,
+          "roc_auc": 0.6874274221881824
+        },
+        "Random Forest": {
+          "pr_auc": 0.40586265385161174,
+          "roc_auc": 0.6861917486780934
+        },
+        "LightGBM": {
+          "pr_auc": 0.4310073970032138,
+          "roc_auc": 0.7070083255903662
+        }
+      },
+      "ablasi_leaky": {
+        "model": "leaky, not deployed",
+        "pr_auc": 0.6457529077599267
+      },
+      "threshold_kabari": 0.205,
+      "threshold_prioritaskan": 0.24,
+      "biaya_minimum": 18540000
     },
     "test": null
   },
@@ -96,12 +87,15 @@
     "scikit-learn": "1.9.1",
     "joblib": "1.6.0"
   },
+  "test_disentuh": false,
+  "pemilihan_model": "Kenaikan PR-AUC 0.0217 cukup bermakna dibanding baseline.",
   "threshold_config": "artifacts/thresholds.json",
   "calibration": {
-    "metode": "tidak ada",
-    "brier_sebelum": 0.11958080614884752,
+    "metode": "isotonic",
+    "brier_sebelum": 0.15440954687546987,
     "brier_prevalensi": 0.17091701513097407,
-    "brier_sigmoid_cv5": 0.11885925368435542,
-    "brier_isotonik_cv5": 0.11831398225004486
-  }
+    "brier_sigmoid_cv5": 0.1709056839170831,
+    "brier_isotonik_cv5": 0.1467780460230499
+  },
+  "calibration_applied": "isotonic"
 }
