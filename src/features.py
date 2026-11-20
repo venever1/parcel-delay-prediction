@@ -154,6 +154,10 @@ def clean_raw(df: pd.DataFrame) -> pd.DataFrame:
         )
     ).fillna(False).astype(bool)
 
+    # Sklearn lebih stabil dengan np.nan daripada pd.NA pada kolom teks.
+    for kolom in ["kota_tujuan", "layanan", "metode_bayar", "cuaca_saat_pickup"]:
+        data[kolom] = data[kolom].astype(object).where(data[kolom].notna(), np.nan)
+
     return data
 
 
