@@ -1,0 +1,99 @@
+{
+  "model_version": "baseline-logreg-v1",
+  "tipe_model": "LogisticRegression dengan fitur asli (baseline)",
+  "tanggal_latih": "2026-11-20 14:13:23",
+  "target": "terlambat",
+  "fitur_masukan": [
+    "jam_pickup",
+    "jarak_km",
+    "jumlah_transit",
+    "janji_hari",
+    "berat_kg",
+    "volume_hub_hari",
+    "kota_tujuan",
+    "layanan",
+    "metode_bayar",
+    "cuaca_saat_pickup"
+  ],
+  "fitur_numerik": [
+    "jam_pickup",
+    "jarak_km",
+    "jumlah_transit",
+    "janji_hari",
+    "berat_kg",
+    "volume_hub_hari"
+  ],
+  "fitur_kategorikal": {
+    "kota_tujuan": [
+      "Balikpapan",
+      "Bekasi",
+      "Bogor",
+      "Cirebon",
+      "Denpasar",
+      "Jakarta",
+      "Makassar",
+      "Malang",
+      "Medan",
+      "Palembang",
+      "Pontianak",
+      "Semarang",
+      "Surabaya",
+      "Tasikmalaya",
+      "Yogyakarta"
+    ],
+    "layanan": [
+      "EXPRESS",
+      "HEMAT",
+      "REG"
+    ],
+    "metode_bayar": [
+      "COD",
+      "non_COD"
+    ],
+    "cuaca_saat_pickup": [
+      "berawan",
+      "cerah",
+      "hujan",
+      "hujan_lebat"
+    ]
+  },
+  "split": {
+    "train": {
+      "sampai": "2025-12-31",
+      "baris": 26633,
+      "rasio_terlambat": 0.17778695603199038
+    },
+    "validation": {
+      "mulai": "2026-01-01",
+      "sampai": "2026-03-31",
+      "baris": 6623,
+      "rasio_terlambat": 0.21878302883889475
+    },
+    "test": {
+      "mulai": "2026-04-01",
+      "sampai": "2026-06-30",
+      "baris": 6744,
+      "rasio_terlambat": 0.13923487544483987
+    }
+  },
+  "thresholds": {
+    "kabari_pelanggan": 0.09,
+    "prioritaskan": 0.3
+  },
+  "threshold_status": "placeholder; 0,09 titik impas biaya, batas prioritaskan belum dikalibrasi",
+  "metrics": {
+    "validation": {
+      "pr_auc": 0.6457529077599267,
+      "roc_auc": 0.8310291170243103,
+      "pr_auc_no_skill": 0.21878302883889475
+    },
+    "test": null
+  },
+  "library_versions": {
+    "python": "3.14.6",
+    "pandas": "3.1.1",
+    "numpy": "2.5.5",
+    "scikit-learn": "1.9.1",
+    "joblib": "1.6.0"
+  }
+}
