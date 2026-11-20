@@ -7,7 +7,13 @@ Pipeline yang di-fit pada train saja.
 
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 # Batas wajar paket kurir. Nilai di atas ini kemungkinan salah satuan (gram)
 # atau salah input, jadi tidak dikoreksi agar tidak menebak.
@@ -52,6 +58,32 @@ KOTA_ALIAS = {
     "balikpapan": "Balikpapan",
     "pontianak": "Pontianak",
 }
+
+FEATURE_NUMERIC_V1 = [
+    "jam_pickup",
+    "jarak_km",
+    "jumlah_transit",
+    "janji_hari",
+    "berat_kg",
+    "hari_dalam_minggu",
+    "is_weekend",
+    "hari_dalam_bulan",
+    "is_akhir_bulan",
+    "jarak_per_janji",
+    "jarak_per_transit",
+    "flag_jarak_missing",
+    "flag_cuaca_missing",
+]
+
+FEATURE_CATEGORICAL_V1 = [
+    "jam_bucket",
+    "kota_tujuan",
+    "layanan",
+    "metode_bayar",
+    "cuaca_saat_pickup",
+]
+
+FEATURE_COLUMNS_V1 = FEATURE_NUMERIC_V1 + FEATURE_CATEGORICAL_V1
 
 
 def clean_raw(df: pd.DataFrame) -> pd.DataFrame:
@@ -123,3 +155,171 @@ def clean_raw(df: pd.DataFrame) -> pd.DataFrame:
     ).fillna(False).astype(bool)
 
     return data
+
+
+class KotaCategoryEncoder(BaseEstimator, TransformerMixin):
+    """Ubah kota menjadi kategori yang dikenal LightGBM.
+
+    Kategori diambil hanya dari train. Kota baru menjadi NaN, bukan-error.
+    """
+
+    def fit(self, X: pd.DataFrame, y=None) -> "KotaCategoryEncoder":
+        self.categories_ = sorted(str(v) for v in X["kota_tujuan"].dropna().unique())
+        return self
+
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        hasil = X.copy()
+        hasil["kota_tujuan"] = pd.Categorical(
+            hasil["kota_tujuan"], categories=self.categories_
+        )
+        return hasil
+
+    def get_feature_names_out(self, input_features=None):
+        return np.asarray(input_features if input_features is not None else ["kota_tujuan"])
+
+
+class KotaTargetEncoder(BaseEstimator, TransformerMixin):
+    """Target encoding kota yang di-fit hanya pada train.
+
+    Kota yang tidak dikenal menghasilkan NaN, jadi aman untuk prediksi baru.
+    """
+
+    def __init__(self, smooth: float = 10.0):
+        self.smooth = smooth
+
+    def fit(self, X: pd.DataFrame, y) -> "KotaTargetEncoder":
+        target = pd.Series(list(y), index=X.index, dtype=float)
+        pasangan = pd.DataFrame(
+            {"kota": X["kota_tujuan"].astype("string"), "target": target}
+        ).dropna()
+        stat = pasangan.groupby("kota")["target"].agg(["mean", "count"])
+        prior = float(target.mean())
+        self.prior_ = prior
+        self.mapping_ = (
+            (stat["mean"] * stat["count"] + prior * self.smooth)
+            / (stat["count"] + self.smooth)
+        ).to_dict()
+        return self
+
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        hasil = X.copy()
+        kode = hasil["kota_tujuan"].astype("string").map(self.mapping_)
+        hasil["kota_target"] = pd.Series(kode, index=hasil.index).astype(float)
+        return hasil.drop(columns=["kota_tujuan"])
+
+    def get_feature_names_out(self, input_features=None):
+        nama = [n for n in (input_features or []) if n != "kota_tujuan"]
+        return np.asarray(nama + ["kota_target"], dtype=object)
+
+
+def make_logistic_preprocessor() -> ColumnTransformer:
+    """Preprocessing untuk regresi logistik: median/modus, scaling, one-hot."""
+    numerik = Pipeline(
+        [
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler()),
+        ]
+    )
+    kategorikal = Pipeline(
+        [
+            ("imputer", SimpleImputer(strategy="most_frequent")),
+            ("onehot", OneHotEncoder(handle_unknown="ignore")),
+        ]
+    )
+    return ColumnTransformer(
+        [
+            ("numerik", numerik, FEATURE_NUMERIC_V1),
+            ("kategorikal", kategorikal, FEATURE_CATEGORICAL_V1),
+        ],
+        remainder="drop",
+    )
+
+
+def make_tree_preprocessor() -> ColumnTransformer:
+    """Preprocessing untuk model tree dengan target encoding kota."""
+    kategorikal_lain = Pipeline(
+        [
+            ("imputer", SimpleImputer(strategy="most_frequent")),
+            ("onehot", OneHotEncoder(handle_unknown="ignore")),
+        ]
+    )
+    return ColumnTransformer(
+        [
+            ("kota", KotaTargetEncoder(), ["kota_tujuan"]),
+            (
+                "kategorikal_lain",
+                kategorikal_lain,
+                [kolom for kolom in FEATURE_CATEGORICAL_V1 if kolom != "kota_tujuan"],
+            ),
+            ("numerik", "passthrough", FEATURE_NUMERIC_V1),
+        ],
+        remainder="drop",
+    )
+
+
+def build_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Buat fitur dari data satu paket saat pickup.
+
+    Fitur yang dibuat hanya memakai informasi yang sudah diketahui saat pickup.
+    `volume_hub_hari` **sengaja tidak dipakai**: nilai itu adalah total paket
+    sehari penuh dan bisa baru lengkap setelah pickup, sehingga berisiko
+    membocorkan informasi masa depan. Jika nanti tersedia volume berjalan
+    sampai jam pickup, fitur itu dapat ditambahkan dengan versi baru.
+    """
+    data = clean_raw(df)
+    tanggal = data["tanggal_pickup"]
+    jam = data["jam_pickup"]
+    jarak = data["jarak_km"]
+    janji = data["janji_hari"]
+    transit = data["jumlah_transit"]
+
+    hari = tanggal.dt.dayofweek
+    fitur = pd.DataFrame(index=data.index)
+
+    fitur["jam_pickup"] = jam
+    fitur["jarak_km"] = jarak
+    fitur["jumlah_transit"] = transit
+    fitur["janji_hari"] = janji
+    fitur["berat_kg"] = data["berat_kg"]
+
+    fitur["hari_dalam_minggu"] = hari
+    fitur["is_weekend"] = (hari >= 5).astype("int8")
+    fitur["hari_dalam_bulan"] = tanggal.dt.day
+    fitur["is_akhir_bulan"] = (
+        tanggal == (tanggal + pd.offsets.MonthEnd(0))
+    ).astype("int8")
+
+    fitur["jam_bucket"] = pd.cut(
+        jam,
+        bins=[6, 9, 12, 15, 18, 22],
+        labels=["pagi", "siang", "sore", "petang", "malam"],
+    ).astype("string")
+
+    # Pembagian dijaga tetap aman: penyebab nol/negatif menjadi NaN, bukan inf.
+    fitur["jarak_per_janji"] = jarak / janji.where(janji > 0)
+    fitur["jarak_per_transit"] = jarak / transit.where(transit > 0)
+
+    fitur["flag_jarak_missing"] = jarak.isna()
+    fitur["flag_cuaca_missing"] = data["cuaca_saat_pickup"].isna()
+
+    fitur["kota_tujuan"] = data["kota_tujuan"]
+    fitur["layanan"] = data["layanan"]
+    fitur["metode_bayar"] = data["metode_bayar"]
+    fitur["cuaca_saat_pickup"] = data["cuaca_saat_pickup"]
+
+    # SimpleImputer lebih stabil dengan np.nan daripada pd.NA pada kolom teks.
+    for kolom in FEATURE_CATEGORICAL_V1:
+        fitur[kolom] = fitur[kolom].astype(object).where(fitur[kolom].notna(), np.nan)
+
+    return fitur[FEATURE_COLUMNS_V1]
+
+
+def siapkan_fitur(df: pd.DataFrame, metadata: dict) -> pd.DataFrame:
+    """Jalur fitur yang dipakai sama oleh training, API, dan Streamlit.
+
+    Model lama tanpa `feature_builder` tetap memakai fitur asli. Model baru
+    dengan `feature_builder = build_features_v1` memakai fitur turunan di atas.
+    """
+    if metadata.get("feature_builder") == "build_features_v1":
+        return build_features(df)[metadata["fitur_masukan"]]
+    return clean_raw(df)[metadata["fitur_masukan"]]

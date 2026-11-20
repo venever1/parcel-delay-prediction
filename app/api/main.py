@@ -19,7 +19,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from src.features import KOTA_ALIAS, clean_raw
+from src.features import KOTA_ALIAS, siapkan_fitur
 
 ROOT = Path(__file__).resolve().parents[2]
 MODEL_PATH = ROOT / "artifacts" / "model.joblib"
@@ -103,10 +103,9 @@ def predict(payload: PackageInput, request: Request) -> PredictionResponse:
     metadata = request.app.state.metadata
 
     try:
-        # clean_raw dipakai ulang agar pemetaan label sama dengan saat pelatihan.
+        # Jalur fitur yang sama dengan pelatihan, dipilih dari metadata model.
         data = pd.DataFrame([payload.model_dump(mode="json")])
-        bersih = clean_raw(data)
-        fitur = bersih[metadata["fitur_masukan"]]
+        fitur = siapkan_fitur(data, metadata)
         probabilitas = float(model.predict_proba(fitur)[0, 1])
     except Exception as exc:
         raise HTTPException(

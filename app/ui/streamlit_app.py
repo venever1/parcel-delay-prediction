@@ -23,7 +23,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app.api.main import PackageInput
-from src.features import clean_raw
+from src.features import siapkan_fitur
 
 st.set_page_config(page_title="Prediksi Keterlambatan Paket", layout="wide")
 
@@ -102,8 +102,7 @@ def prediksi_lokal(payload: dict) -> dict:
     try:
         model, metadata = muat_model_cadangan()
         data = pd.DataFrame([payload])
-        bersih = clean_raw(data)
-        fitur = bersih[metadata["fitur_masukan"]]
+        fitur = siapkan_fitur(data, metadata)
         probabilitas = float(model.predict_proba(fitur)[0, 1])
         return {
             "probabilitas": probabilitas,
