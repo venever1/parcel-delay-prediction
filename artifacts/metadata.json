@@ -85,7 +85,78 @@
       "biaya_model": 21170000,
       "biaya_mengabari_semua": 25870000
     },
-    "test": null
+    "test": {
+      "three_models": [
+        {
+          "model": "A. LogReg original incl volume (leaky, not deployable)",
+          "PR-AUC": 0.35602868584795677,
+          "ROC-AUC": 0.7452111992617726,
+          "test positive rate": 0.13923487544483987
+        },
+        {
+          "model": "B. LogReg original tanpa volume",
+          "PR-AUC": 0.3601325347619575,
+          "ROC-AUC": 0.7470729118796088,
+          "test positive rate": 0.13923487544483987
+        },
+        {
+          "model": "C. Final LogReg+lag sigmoid",
+          "PR-AUC": 0.36081532875428135,
+          "ROC-AUC": 0.7501984536484375,
+          "test positive rate": 0.13923487544483987
+        }
+      ],
+      "final": {
+        "pr_auc": 0.36081532875428135,
+        "roc_auc": 0.7501984536484375,
+        "positive_rate": 0.13923487544483987,
+        "notify_threshold": 0.09,
+        "precision": 0.20391134289439375,
+        "recall": 0.832800851970181,
+        "share_notified": 0.5686536180308422,
+        "confusion_matrix": {
+          "tidak dikabari": {
+            "aktual 0": 2752,
+            "aktual 1": 157
+          },
+          "dikabari": {
+            "aktual 0": 3053,
+            "aktual 1": 782
+          }
+        },
+        "cost_model": 23115000,
+        "cost_nobody": 46950000,
+        "cost_everyone": 29025000,
+        "brier": 0.10526050300577569,
+        "prioritize": {
+          "threshold": 0.523,
+          "share": 0.030545670225385527,
+          "precision": 0.5485436893203883,
+          "recall": 0.12034078807241747,
+          "lift": 3.9397003629144822
+        },
+        "monthly_pr_auc": [
+          {
+            "bulan": "2026-04",
+            "n": 2301,
+            "positive_rate": 0.14732724902216426,
+            "PR-AUC": 0.35925061890947263
+          },
+          {
+            "bulan": "2026-05",
+            "n": 2288,
+            "positive_rate": 0.13024475524475523,
+            "PR-AUC": 0.3475480472594559
+          },
+          {
+            "bulan": "2026-06",
+            "n": 2155,
+            "positive_rate": 0.14013921113689096,
+            "PR-AUC": 0.3903531971338716
+          }
+        ]
+      }
+    }
   },
   "library_versions": {
     "python": "3.14.6",
@@ -94,7 +165,7 @@
     "scikit-learn": "1.9.1",
     "joblib": "1.6.0"
   },
-  "test_disentuh": false,
+  "test_disentuh": true,
   "pemilihan_model": "Model kompleks tidak memberi kenaikan PR-AUC yang bermakna, jadi regresi logistik dipilih karena lebih mudah dijelaskan dan lebih stabil.",
   "model_base_file": "artifacts/model_base.joblib",
   "model_params": {
@@ -115,5 +186,6 @@
       "2026-03"
     ]
   },
-  "calibration_applied": "sigmoid"
+  "calibration_applied": "sigmoid",
+  "test_evaluated_at": "2026-11-21 08:51:56"
 }
