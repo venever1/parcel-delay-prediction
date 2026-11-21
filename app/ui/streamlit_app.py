@@ -29,19 +29,82 @@ from src.features import KOTA_ALIAS, siapkan_fitur
 st.set_page_config(page_title="Prediksi Keterlambatan Paket", layout="wide")
 
 KOLOM_INPUT = [
-    "Tanggal Pickup",
-    "Jam Pickup",
-    "Kota Tujuan",
-    "Jarak Km",
-    "Jumlah Transit",
+    "tanggal_pickup",
+    "jam_pickup",
+    "kota_tujuan",
+    "jarak_km",
+    "jumlah_transit",
     "layanan",
-    "Janji Hari",
-    "Berat Kg",
-    "Metode Bayar",
-    "Cuaca Saat Pickup",
-    "Volume hub Kemarin",
-    "Volume Hub 7Hari",
+    "janji_hari",
+    "berat_kg",
+    "metode_bayar",
+    "cuaca_saat_pickup",
+    "volume_hub_kemarin",
+    "volume_hub_7hari",
 ]
+
+LABEL_LAYANAN = {"REG": "Reguler", "EXPRESS": "Express", "HEMAT": "Hemat"}
+LABEL_METODE = {"COD": "COD", "non_COD": "Non-COD"}
+LABEL_CUACA = {
+    "cerah": "Cerah",
+    "berawan": "Berawan",
+    "hujan": "Hujan",
+    "hujan_lebat": "Hujan lebat",
+}
+KOTA_OPTIONS = sorted(set(KOTA_ALIAS.values()))
+
+# Nama kolom asli dipetakan ke label yang dilihat pengguna. Pesan galat tidak
+# boleh menampilkan nama kolom mentah seperti "jam_pickup".
+LABEL_FIELD = {
+    "tanggal_pickup": "Tanggal pickup",
+    "jam_pickup": "Jam pickup",
+    "kota_tujuan": "Kota tujuan",
+    "jarak_km": "Jarak dari Bandung (km)",
+    "jumlah_transit": "Jumlah transit",
+    "layanan": "Layanan",
+    "janji_hari": "Janji tiba (hari)",
+    "berat_kg": "Berat (kg)",
+    "metode_bayar": "Metode bayar",
+    "cuaca_saat_pickup": "Cuaca saat pickup",
+    "volume_hub_kemarin": "Volume hub kemarin",
+    "volume_hub_7hari": "Rata-rata volume hub 7 hari sebelumnya",
+}
+
+
+def label_kota(kota: str) -> str:
+    """Tampilkan nama kota tanpa garis bawah dan dalam Title Case."""
+    return str(kota).replace("_", " ").title()
+
+
+def bangun_payload(
+    tanggal,
+    jam: int,
+    kota: str,
+    jarak: float,
+    transit: int,
+    layanan: str,
+    janji: int,
+    berat: float,
+    metode: str,
+    cuaca: str,
+    volume_kemarin: int,
+    volume_7hari: float,
+) -> dict:
+    """Susun payload dengan nama kolom asli yang diterima PackageInput."""
+    return {
+        "tanggal_pickup": tanggal.isoformat() if tanggal is not None else None,
+        "jam_pickup": int(jam),
+        "kota_tujuan": str(kota).strip(),
+        "jarak_km": float(jarak),
+        "jumlah_transit": int(transit),
+        "layanan": layanan,
+        "janji_hari": int(janji),
+        "berat_kg": float(berat),
+        "metode_bayar": metode,
+        "cuaca_saat_pickup": cuaca,
+        "volume_hub_kemarin": int(volume_kemarin),
+        "volume_hub_7hari": float(volume_7hari),
+    }
 
 
 def api_url() -> str | None:
@@ -73,6 +136,33 @@ def rekomendasi(probabilitas: float, thresholds: dict) -> str:
     return "aman"
 
 
+def pesan_ramah(field: str, pesan: str) -> str:
+    """Terjemahkan galat Pydantic menjadi kalimat yang dipahami pengguna."""
+    field = str(field).split(".")[-1]
+    label = LABEL_FIELD.get(field, "Data")
+    teks = str(pesan).lower()
+
+    if "field required" in teks:
+        return f"{label} wajib diisi."
+    if field == "layanan":
+        return "Layanan tidak valid. Pilih Reguler, Express, atau Hemat."
+    if field == "metode_bayar":
+        return "Metode bayar tidak valid. Pilih COD atau Non-COD."
+    if field == "cuaca_saat_pickup":
+        return "Cuaca saat pickup tidak valid. Pilih Cerah, Berawan, Hujan, atau Hujan lebat."
+    if field == "kota_tujuan":
+        return "Kota tujuan wajib dipilih dari daftar kota yang tersedia."
+    if field == "tanggal_pickup":
+        return "Tanggal pickup tidak valid; gunakan format YYYY-MM-DD."
+    if "less than or equal to" in teks:
+        return f"{label} maksimal {teks.rsplit(' ', 1)[-1].rstrip('.')}."
+    if "greater than or equal to" in teks:
+        return f"{label} minimal {teks.rsplit(' ', 1)[-1].rstrip('.')}."
+    if "greater than" in teks:
+        return f"{label} harus lebih dari {teks.rsplit(' ', 1)[-1].rstrip('.')}."
+    return f"{label} tidak valid."
+
+
 def pesan_galat(respons: requests.Response) -> str:
     """Ubah error API menjadi kalimat yang mudah dibaca."""
     try:
@@ -80,14 +170,11 @@ def pesan_galat(respons: requests.Response) -> str:
     except ValueError:
         return f"API mengembalikan galat {respons.status_code}."
 
-    detail = str(isi.get("detail", "Data ditolak API."))
     errors = isi.get("errors", [])
     if errors:
-        ringkas = []
-        for err in errors[:3]:
-            ringkas.append(f"{err.get('field', 'input')}: {err.get('message', 'tidak valid')}")
-        detail += ". " + "; ".join(ringkas)
-    return detail
+        pesan = [pesan_ramah(err.get("field", ""), err.get("message", "")) for err in errors]
+        return "Data tidak valid. " + " ".join(pesan)
+    return str(isi.get("detail", "Data ditolak API."))
 
 
 def prediksi_lokal(payload: dict) -> dict:
@@ -95,11 +182,11 @@ def prediksi_lokal(payload: dict) -> dict:
     try:
         PackageInput.model_validate(payload)
     except ValidationError as exc:
-        ringkas = []
-        for err in exc.errors()[:3]:
-            lokasi = ".".join(str(bagian) for bagian in err["loc"])
-            ringkas.append(f"{lokasi}: {err['msg']}")
-        return {"error": "Data tidak valid. " + "; ".join(ringkas)}
+        pesan = [
+            pesan_ramah(".".join(str(bagian) for bagian in err["loc"]), err["msg"])
+            for err in exc.errors()
+        ]
+        return {"error": "Data tidak valid. " + " ".join(pesan)}
 
     try:
         model, metadata = muat_model_cadangan()
@@ -130,6 +217,23 @@ def prediksi(payload: dict, tampilkan_cadangan: bool = True) -> dict:
         if tampilkan_cadangan:
             st.caption("Prediksi memakai model lokal")
         return prediksi_lokal(payload)
+
+
+def prediksi_batch(tabel: pd.DataFrame) -> pd.DataFrame:
+    """Prediksi tiap baris CSV; kolom asli dipertahankan agar unduhan sama."""
+    hasil_baris = []
+    for indeks, baris in tabel.iterrows():
+        payload = {kolom: nilai_csv(baris[kolom]) for kolom in KOLOM_INPUT}
+        hasil = prediksi(payload, tampilkan_cadangan=(indeks == 0))
+        hasil_baris.append(
+            {
+                "baris": int(indeks) + 1,
+                "probabilitas": hasil.get("probabilitas"),
+                "rekomendasi": hasil.get("rekomendasi", ""),
+                "error": hasil.get("error", ""),
+            }
+        )
+    return pd.concat([tabel.reset_index(drop=True), pd.DataFrame(hasil_baris)], axis=1)
 
 
 def tema_aktif() -> str:
@@ -220,18 +324,24 @@ with tab_satu:
                 st.markdown("**Paket**")
                 tanggal = st.date_input("Tanggal pickup", value=date(2025, 6, 15))
                 jam = st.slider("Jam pickup", min_value=7, max_value=22, value=9)
-                kota = st.selectbox("Kota tujuan", sorted(set(KOTA_ALIAS.values())))
+                kota = st.selectbox("Kota tujuan", KOTA_OPTIONS, format_func=label_kota)
                 jarak = st.number_input("Jarak dari Bandung (km)", min_value=0.0, max_value=3000.0, value=150.0)
                 transit = st.number_input("Jumlah transit", min_value=0, max_value=10, value=1)
 
             with kanan:
                 st.markdown("**Rute dan layanan**")
-                layanan = st.selectbox("Layanan", ["Regular", "Express", "Hemat"])
+                layanan = st.selectbox(
+                    "Layanan", list(LABEL_LAYANAN), format_func=lambda nilai: LABEL_LAYANAN[nilai]
+                )
                 janji = st.number_input("Janji tiba (hari)", min_value=1, max_value=14, value=4)
                 berat = st.number_input("Berat (kg)", min_value=0.0, max_value=100.0, value=1.2, step=0.1)
-                metode = st.selectbox("Metode bayar", ["COD", "Non COD"])
+                metode = st.selectbox(
+                    "Metode bayar", list(LABEL_METODE), format_func=lambda nilai: LABEL_METODE[nilai]
+                )
                 st.markdown("**Kondisi**")
-                cuaca = st.selectbox("Cuaca saat pickup", ["Cerah", "Berawan", "Hujan", "Hujan Lebat"])
+                cuaca = st.selectbox(
+                    "Cuaca saat pickup", list(LABEL_CUACA), format_func=lambda nilai: LABEL_CUACA[nilai]
+                )
                 volume_kemarin = st.number_input("Volume hub kemarin", min_value=0, max_value=30000, value=5000)
                 volume_7hari = st.number_input("Rata-rata volume hub 7 hari sebelumnya", min_value=0.0, max_value=30000.0, value=5100.0)
 
@@ -241,20 +351,21 @@ with tab_satu:
         if tanggal is None:
             st.error("Tanggal pickup belum diisi.")
         else:
-            payload = {
-                "Tanggal Pick up": tanggal.isoformat(),
-                "Jam Pick up": int(jam),
-                "Kota Tujuan": kota,
-                "Jarak Km": float(jarak),
-                "Jumlah Transit": int(transit),
-                "Layanan": layanan,
-                "Janji Hari": int(janji),
-                "Berat Kg": float(berat),
-                "Metode Bayar": metode,
-                "Cuaca Saat Pickup": cuaca,
-                "Volume Hub Kemarin": int(volume_kemarin),
-                "Volume Hub 7hari": float(volume_7hari),
-            }
+            payload = bangun_payload(
+                tanggal,
+                jam,
+                kota,
+                jarak,
+                transit,
+                layanan,
+                janji,
+                berat,
+                metode,
+                cuaca,
+                volume_kemarin,
+                volume_7hari,
+            )
+            st.session_state["payload_terakhir"] = payload
             with st.spinner("Menghitung probabilitas..."):
                 tampilkan_hasil(prediksi(payload))
 
@@ -272,20 +383,7 @@ with tab_batch:
         if hilang:
             st.error(f"Kolom belum ada: {', '.join(hilang)}")
         else:
-            hasil_baris = []
-            for indeks, baris in tabel.iterrows():
-                payload = {kolom: nilai_csv(baris[kolom]) for kolom in KOLOM_INPUT}
-                hasil = prediksi(payload, tampilkan_cadangan=(indeks == 0))
-                hasil_baris.append(
-                    {
-                        "baris": int(indeks) + 1,
-                        "probabilitas": hasil.get("probabilitas"),
-                        "rekomendasi": hasil.get("rekomendasi", ""),
-                        "error": hasil.get("error", ""),
-                    }
-                )
-
-            keluaran = pd.concat([tabel.reset_index(drop=True), pd.DataFrame(hasil_baris)], axis=1)
+            keluaran = prediksi_batch(tabel)
             st.dataframe(keluaran, use_container_width=True)
             st.download_button(
                 "Unduh hasil prediksi",
