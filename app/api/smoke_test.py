@@ -27,6 +27,8 @@ BASE = {
     "metode_bayar": "non_COD",
     "cuaca_saat_pickup": "cerah",
     "volume_hub_hari": 4800,
+    "volume_hub_kemarin": 5000,
+    "volume_hub_7hari": 5100.0,
 }
 
 NORMAL = {

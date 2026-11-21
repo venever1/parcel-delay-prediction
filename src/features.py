@@ -74,6 +74,8 @@ FEATURE_NUMERIC_V1 = [
     "jarak_per_transit",
     "flag_jarak_missing",
     "flag_cuaca_missing",
+    "volume_hub_kemarin",
+    "volume_hub_7hari",
 ]
 
 FEATURE_CATEGORICAL_V1 = [
@@ -262,14 +264,42 @@ def make_tree_preprocessor() -> ColumnTransformer:
     )
 
 
+def tambah_volume_lag(df: pd.DataFrame, referensi: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Tambahkan volume hub hari sebelumnya dan rata-rata 7 hari sebelumnya.
+
+    Hanya memakai tanggal sebelum pickup. Referensi boleh berisi train+validation
+    agar awal validation tetap punya lag dari bulan sebelumnya.
+    """
+    sumber = df if referensi is None else referensi
+    harian = (
+        sumber.drop_duplicates()
+        .groupby("tanggal_pickup")["volume_hub_hari"]
+        .median()
+        .sort_index()
+    )
+
+    # Reindex ke kalender penuh agar shift(1) berarti "kemarin", bukan "baris
+    # sebelumnya". Tanggal kosong tetap NaN, tidak di-forward-fill.
+    kalender = pd.date_range(harian.index.min(), harian.index.max(), freq="D")
+    harian_kalender = harian.reindex(kalender)
+    kemarin = harian_kalender.shift(1)
+    rata_7 = kemarin.rolling(7, min_periods=7).mean()
+
+    tabel_lag = pd.DataFrame(
+        {"volume_hub_kemarin": kemarin, "volume_hub_7hari": rata_7}
+    ).loc[harian.index]
+    hasil = df.merge(tabel_lag, left_on="tanggal_pickup", right_index=True, how="left")
+    return hasil
+
+
 def build_features(df: pd.DataFrame) -> pd.DataFrame:
     """Buat fitur dari data satu paket saat pickup.
 
     Fitur yang dibuat hanya memakai informasi yang sudah diketahui saat pickup.
     `volume_hub_hari` **sengaja tidak dipakai**: nilai itu adalah total paket
-    sehari penuh dan bisa baru lengkap setelah pickup, sehingga berisiko
-    membocorkan informasi masa depan. Jika nanti tersedia volume berjalan
-    sampai jam pickup, fitur itu dapat ditambahkan dengan versi baru.
+    sehari penuh dan bisa baru lengkap setelah pickup. Penggantinya adalah
+    `volume_hub_kemarin` dan `volume_hub_7hari`, yang hanya memakai hari
+    sebelum pickup.
     """
     data = clean_raw(df)
     tanggal = data["tanggal_pickup"]
@@ -306,6 +336,14 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
 
     fitur["flag_jarak_missing"] = jarak.isna()
     fitur["flag_cuaca_missing"] = data["cuaca_saat_pickup"].isna()
+
+    # Lag volume sudah dihitung dari hari sebelum pickup. Jika belum ada,
+    # biarkan NaN agar imputer train yang mengisi.
+    for kolom in ["volume_hub_kemarin", "volume_hub_7hari"]:
+        if kolom in data.columns:
+            fitur[kolom] = pd.to_numeric(data[kolom], errors="coerce")
+        else:
+            fitur[kolom] = np.nan
 
     fitur["kota_tujuan"] = data["kota_tujuan"]
     fitur["layanan"] = data["layanan"]

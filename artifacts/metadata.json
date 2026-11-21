@@ -1,7 +1,7 @@
 {
-  "model_version": "engineered-lightgbm-v1-isotonic",
-  "tipe_model": "LightGBM dengan build_features (tanpa volume_hub_hari)",
-  "tanggal_latih": "2026-11-20 23:03:54",
+  "model_version": "lag-logreg-v1-sigmoid",
+  "tipe_model": "Logistic Regression dengan build_features (tanpa volume_hub_hari)",
+  "tanggal_latih": "2026-11-21 02:03:33",
   "target": "terlambat",
   "feature_builder": "build_features_v1",
   "fitur_masukan": [
@@ -18,6 +18,8 @@
     "jarak_per_transit",
     "flag_jarak_missing",
     "flag_cuaca_missing",
+    "volume_hub_kemarin",
+    "volume_hub_7hari",
     "jam_bucket",
     "kota_tujuan",
     "layanan",
@@ -48,35 +50,40 @@
     }
   },
   "thresholds": {
-    "kabari_pelanggan": 0.205,
-    "prioritaskan": 0.24
+    "kabari_pelanggan": 0.09,
+    "prioritaskan": 0.523
   },
-  "threshold_status": "final; dikunci dari validation",
+  "threshold_status": "final; OOF validation",
   "metrics": {
     "validation": {
-      "pr_auc": 0.4310073970032138,
-      "roc_auc": 0.7070083255903662,
+      "pr_auc": 0.5912985601850931,
+      "roc_auc": 0.8111162864276258,
       "perbandingan": {
         "Logistic Regression": {
-          "pr_auc": 0.4093340069099766,
-          "roc_auc": 0.6874274221881824
+          "pr_auc": 0.5912985601850931,
+          "roc_auc": 0.8111162864276258
         },
         "Random Forest": {
-          "pr_auc": 0.40586265385161174,
-          "roc_auc": 0.6861917486780934
+          "pr_auc": 0.5623573927073734,
+          "roc_auc": 0.7950664027788782
         },
         "LightGBM": {
-          "pr_auc": 0.4310073970032138,
-          "roc_auc": 0.7070083255903662
+          "pr_auc": 0.5784620015938667,
+          "roc_auc": 0.7982102074848416
         }
       },
       "ablasi_leaky": {
         "model": "leaky, not deployed",
         "pr_auc": 0.6457529077599267
       },
-      "threshold_kabari": 0.205,
-      "threshold_prioritaskan": 0.24,
-      "biaya_minimum": 18540000
+      "brier_raw_oof": 0.19247550474102887,
+      "brier_sigmoid_oof": 0.1281879529739956,
+      "brier_isotonik_oof": 0.12919868212737828,
+      "brier_terpilih_oof": 0.1281879529739956,
+      "threshold_kabari": 0.09,
+      "threshold_prioritaskan": 0.523,
+      "biaya_model": 21170000,
+      "biaya_mengabari_semua": 25870000
     },
     "test": null
   },
@@ -88,14 +95,25 @@
     "joblib": "1.6.0"
   },
   "test_disentuh": false,
-  "pemilihan_model": "Kenaikan PR-AUC 0.0217 cukup bermakna dibanding baseline.",
+  "pemilihan_model": "Model kompleks tidak memberi kenaikan PR-AUC yang bermakna, jadi regresi logistik dipilih karena lebih mudah dijelaskan dan lebih stabil.",
+  "model_base_file": "artifacts/model_base.joblib",
+  "model_params": {
+    "C": 10.0,
+    "class_weight": "balanced"
+  },
+  "probability_scale": "sigmoid",
   "threshold_config": "artifacts/thresholds.json",
   "calibration": {
-    "metode": "isotonic",
-    "brier_sebelum": 0.15440954687546987,
-    "brier_prevalensi": 0.17091701513097407,
-    "brier_sigmoid_cv5": 0.1709056839170831,
-    "brier_isotonik_cv5": 0.1467780460230499
+    "metode_deploy": "sigmoid",
+    "brier_raw_oof": 0.19247550474102887,
+    "brier_sigmoid_oof": 0.1281879529739956,
+    "brier_isotonik_oof": 0.12919868212737828,
+    "brier_terpilih_oof": 0.1281879529739956,
+    "fold": [
+      "2026-01",
+      "2026-02",
+      "2026-03"
+    ]
   },
-  "calibration_applied": "isotonic"
+  "calibration_applied": "sigmoid"
 }

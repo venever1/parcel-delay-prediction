@@ -42,6 +42,8 @@ class PackageInput(BaseModel):
     metode_bayar: Literal["COD", "non_COD"]
     cuaca_saat_pickup: Literal["cerah", "berawan", "hujan", "hujan_lebat"]
     volume_hub_hari: int = Field(gt=0)
+    volume_hub_kemarin: int = Field(gt=0)
+    volume_hub_7hari: float = Field(gt=0, allow_inf_nan=False)
 
     @field_validator("kota_tujuan")
     @classmethod

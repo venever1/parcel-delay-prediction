@@ -1,28 +1,82 @@
 {
-  "model_version": "engineered-lightgbm-v1-isotonic",
-  "model_terpilih": "LightGBM dengan build_features (tanpa volume_hub_hari)",
+  "model_version": "lag-logreg-v1-sigmoid",
+  "probabilitas_skala": "sigmoid",
   "sumber_data": "validation 2026-01-01 sampai 2026-03-31",
-  "tanggal_kunci": "2026-11-20 23:08:59",
+  "tanggal_kunci": "2026-11-21 02:03:40",
   "kalibrasi": {
-    "metode": "isotonic",
-    "brier_sebelum": 0.15440954687546987,
-    "brier_prevalensi": 0.17091701513097407,
-    "brier_sigmoid_cv5": 0.1709056839170831,
-    "brier_isotonik_cv5": 0.1467780460230499
+    "metode_deploy": "sigmoid",
+    "brier_raw_oof": 0.19247550474102887,
+    "brier_sigmoid_oof": 0.1281879529739956,
+    "brier_isotonik_oof": 0.12919868212737828,
+    "brier_terpilih_oof": 0.1281879529739956,
+    "fold": [
+      "2026-01",
+      "2026-02",
+      "2026-03"
+    ]
   },
   "thresholds": {
-    "kabari_pelanggan": 0.205,
-    "prioritaskan": 0.24
+    "kabari_pelanggan": 0.09,
+    "prioritaskan": 0.523
   },
   "alasan": {
-    "kabari_pelanggan": "Biaya minimum validation Rp18,540,000; teoretis 0.0909 memberi biaya Rp25,870,000.",
-    "prioritaskan": "Precision 0.739 dengan 1176 paket, memenuhi syarat precision >= 0.7 dan paket >= 100."
+    "kabari_pelanggan": "Biaya minimum OOF Rp21,170,000; teoretis Rp21,185,000.",
+    "prioritaskan": "Kapasitas top 10%; precision 0.686, lift 3.137."
   },
   "biaya": {
     "terlambat_tanpa_kabar": 50000,
     "kabar_keliru": 5000,
     "teoretis": 0.09090909090909091,
-    "minimum_validation": 18540000
+    "model": 21170000,
+    "tidak_mengabari": 72450000,
+    "mengabari_semua": 25870000,
+    "selisih_model_vs_semua": -4700000,
+    "bootstrap_ci_95": [
+      -5835000,
+      -3564750
+    ],
+    "bagian_dikabari": 0.6554431526498565
   },
+  "drift": [
+    {
+      "bulan": "2026-01",
+      "threshold_dari_bulan_lain": 0.084,
+      "biaya_model": 8045000,
+      "biaya_kabari_semua": 10090000,
+      "selisih": -2045000
+    },
+    {
+      "bulan": "2026-02",
+      "threshold_dari_bulan_lain": 0.09,
+      "biaya_model": 6765000,
+      "biaya_kabari_semua": 8605000,
+      "selisih": -1840000
+    },
+    {
+      "bulan": "2026-03",
+      "threshold_dari_bulan_lain": 0.11,
+      "biaya_model": 7010000,
+      "biaya_kabari_semua": 7175000,
+      "selisih": -165000
+    }
+  ],
+  "kapasitas": [
+    {
+      "zona": "top 5%",
+      "threshold": 0.668,
+      "jumlah": 332,
+      "precision": 0.7831,
+      "recall": 0.1794,
+      "lift": 3.579
+    },
+    {
+      "zona": "top 10%",
+      "threshold": 0.523,
+      "jumlah": 663,
+      "precision": 0.6863,
+      "recall": 0.314,
+      "lift": 3.137
+    }
+  ],
   "test_disentuh": false
 }

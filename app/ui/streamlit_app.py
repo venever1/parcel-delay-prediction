@@ -23,7 +23,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app.api.main import PackageInput
-from src.features import siapkan_fitur
+from src.features import KOTA_ALIAS, siapkan_fitur
 
 st.set_page_config(page_title="Prediksi Keterlambatan Paket", layout="wide")
 
@@ -39,6 +39,8 @@ KOLOM_INPUT = [
     "metode_bayar",
     "cuaca_saat_pickup",
     "volume_hub_hari",
+    "volume_hub_kemarin",
+    "volume_hub_7hari",
 ]
 
 
@@ -174,7 +176,7 @@ with tab_satu:
             jam = st.slider("Jam pickup", min_value=7, max_value=22, value=9)
             kota = st.selectbox(
                 "Kota tujuan",
-                sorted(muat_model_cadangan()[1]["fitur_kategorikal"]["kota_tujuan"]),
+                sorted(set(KOTA_ALIAS.values())),
             )
             jarak = st.number_input("Jarak dari Bandung (km)", min_value=0.0, max_value=3000.0, value=150.0)
             transit = st.number_input("Jumlah transit", min_value=0, max_value=10, value=1)
@@ -185,6 +187,8 @@ with tab_satu:
             metode = st.selectbox("Metode bayar", ["COD", "non_COD"])
             cuaca = st.selectbox("Cuaca saat pickup", ["cerah", "berawan", "hujan", "hujan_lebat"])
             volume = st.number_input("Volume hub hari itu", min_value=0, max_value=30000, value=4800)
+            volume_kemarin = st.number_input("Volume hub kemarin", min_value=0, max_value=30000, value=5000)
+            volume_7hari = st.number_input("Rata-rata volume hub 7 hari sebelumnya", min_value=0.0, max_value=30000.0, value=5100.0)
 
         dikirim = st.form_submit_button("Prediksi")
 
@@ -204,6 +208,8 @@ with tab_satu:
                 "metode_bayar": metode,
                 "cuaca_saat_pickup": cuaca,
                 "volume_hub_hari": int(volume),
+                "volume_hub_kemarin": int(volume_kemarin),
+                "volume_hub_7hari": float(volume_7hari),
             }
             with st.spinner("Menghitung probabilitas..."):
                 tampilkan_hasil(prediksi(payload))
