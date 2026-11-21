@@ -28,7 +28,6 @@ BARIS = {
     "berat_kg": 2.5,
     "metode_bayar": "non_COD",
     "cuaca_saat_pickup": None,
-    "volume_hub_hari": 5000,
     "volume_hub_kemarin": 4900,
     "volume_hub_7hari": 5050.0,
 }

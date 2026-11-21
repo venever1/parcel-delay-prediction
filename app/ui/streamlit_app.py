@@ -43,7 +43,6 @@ KOLOM_INPUT = [
     "berat_kg",
     "metode_bayar",
     "cuaca_saat_pickup",
-    "volume_hub_hari",
     "volume_hub_kemarin",
     "volume_hub_7hari",
 ]
@@ -189,9 +188,8 @@ with tab_satu:
             layanan = st.selectbox("Layanan", ["REG", "EXPRESS", "HEMAT"])
             janji = st.number_input("Janji tiba (hari)", min_value=1, max_value=14, value=4)
             berat = st.number_input("Berat (kg)", min_value=0.0, max_value=100.0, value=1.2, step=0.1)
-            metode = st.selectbox("Metode bayar", ["COD", "Non COD"])
-            cuaca = st.selectbox("Cuaca saat pickup", ["Cerah", "Berawan", "Hujan", "Hujan Lebat"])
-            volume = st.number_input("Volume hub hari itu", min_value=0, max_value=30000, value=4800)
+            metode = st.selectbox("Metode bayar", ["COD", "non_COD"])
+            cuaca = st.selectbox("Cuaca saat pickup", ["cerah", "berawan", "hujan", "hujan_lebat"])
             volume_kemarin = st.number_input("Volume hub kemarin", min_value=0, max_value=30000, value=5000)
             volume_7hari = st.number_input("Rata-rata volume hub 7 hari sebelumnya", min_value=0.0, max_value=30000.0, value=5100.0)
 
@@ -212,7 +210,6 @@ with tab_satu:
                 "berat_kg": float(berat),
                 "metode_bayar": metode,
                 "cuaca_saat_pickup": cuaca,
-                "volume_hub_hari": int(volume),
                 "volume_hub_kemarin": int(volume_kemarin),
                 "volume_hub_7hari": float(volume_7hari),
             }

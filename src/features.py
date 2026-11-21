@@ -124,13 +124,15 @@ def clean_raw(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     for col in ["jarak_km", "jumlah_transit", "janji_hari", "berat_kg", "volume_hub_hari"]:
-        data[col] = pd.to_numeric(data[col], errors="coerce")
+        if col in data:
+            data[col] = pd.to_numeric(data[col], errors="coerce")
 
     # Nilai mustahil dijadikan NaN; imputasi menunggu setelah split.
     data.loc[data["jarak_km"] < 0, "jarak_km"] = pd.NA
     data.loc[data["jumlah_transit"] < 0, "jumlah_transit"] = pd.NA
     data.loc[data["janji_hari"] <= 0, "janji_hari"] = pd.NA
-    data.loc[data["volume_hub_hari"] <= 0, "volume_hub_hari"] = pd.NA
+    if "volume_hub_hari" in data:
+        data.loc[data["volume_hub_hari"] <= 0, "volume_hub_hari"] = pd.NA
 
     jam = pd.to_numeric(data["jam_pickup"], errors="coerce")
     data["jam_pickup"] = jam.where(jam.between(7, 22))
@@ -145,7 +147,11 @@ def clean_raw(df: pd.DataFrame) -> pd.DataFrame:
     # Masalah yang belum bisa diputuskan hanya ditandai, tidak diubah.
     data["flag_jarak_missing"] = data["jarak_km"].isna()
     data["flag_cuaca_missing"] = data["cuaca_saat_pickup"].isna()
-    data["flag_volume_ekstrem"] = data["volume_hub_hari"] > VOLUME_HUB_EKSTREM
+    data["flag_volume_ekstrem"] = (
+        data["volume_hub_hari"] > VOLUME_HUB_EKSTREM
+        if "volume_hub_hari" in data
+        else False
+    )
 
     janji_min = data["layanan"].map({k: v[0] for k, v in JANJI_VALID.items()})
     janji_max = data["layanan"].map({k: v[1] for k, v in JANJI_VALID.items()})

@@ -43,7 +43,9 @@ class PackageInput(BaseModel):
     berat_kg: float = Field(gt=0, le=100, allow_inf_nan=False)
     metode_bayar: Literal["COD", "non_COD"]
     cuaca_saat_pickup: Literal["cerah", "berawan", "hujan", "hujan_lebat"]
-    volume_hub_hari: int = Field(gt=0)
+    # volume_hub_hari sengaja opsional: tidak dipakai model, hanya disimpan
+    # untuk kompatibilitas payload lama dan audit. Jika dikirim, harus > 0.
+    volume_hub_hari: int | None = Field(default=None, gt=0)
     volume_hub_kemarin: int = Field(gt=0)
     volume_hub_7hari: float = Field(gt=0, allow_inf_nan=False)
 
