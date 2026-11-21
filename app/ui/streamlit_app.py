@@ -23,6 +23,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app.api.main import PackageInput
+import sys
+from pathlib import Path
+
+# taruh root repo di urutan pertama agar `src` milik proyek ini yang terbaca
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from src.features import KOTA_ALIAS, siapkan_fitur
 
 st.set_page_config(page_title="Prediksi Keterlambatan Paket", layout="wide")
