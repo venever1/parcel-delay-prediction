@@ -1,19 +1,21 @@
 [theme]
-base = "light"
-primaryColor = "#2563EB"
-backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F8FAFC"
-textColor = "#111827"
-borderColor = "#E5E7EB"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap, sans-serif"
+headingFont = "Plus Jakarta Sans:https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700&display=swap, sans-serif"
+codeFont = "JetBrains Mono:https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap, monospace"
 baseRadius = "0.5rem"
 buttonRadius = "0.5rem"
-font = "sans-serif"
-headingFont = "sans-serif"
-codeFont = "monospace"
 showWidgetBorder = true
 
-[theme.sidebar]
-backgroundColor = "#F8FAFC"
+[theme.light]
+primaryColor = "#111827"
+backgroundColor = "#F8F9FA"
 secondaryBackgroundColor = "#FFFFFF"
-primaryColor = "#2563EB"
-baseRadius = "0.5rem"
+textColor = "#111827"
+borderColor = "#E5E7EB"
+
+[theme.dark]
+primaryColor = "#F3F4F6"
+backgroundColor = "#0F1115"
+secondaryBackgroundColor = "#1A1D23"
+textColor = "#F3F4F6"
+borderColor = "#2A2F38"

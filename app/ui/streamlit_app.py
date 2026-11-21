@@ -29,18 +29,18 @@ from src.features import KOTA_ALIAS, siapkan_fitur
 st.set_page_config(page_title="Prediksi Keterlambatan Paket", layout="wide")
 
 KOLOM_INPUT = [
-    "tanggal_pickup",
-    "jam_pickup",
-    "kota_tujuan",
-    "jarak_km",
-    "jumlah_transit",
+    "Tanggal Pickup",
+    "Jam Pickup",
+    "Kota Tujuan",
+    "Jarak Km",
+    "Jumlah Transit",
     "layanan",
-    "janji_hari",
-    "berat_kg",
-    "metode_bayar",
-    "cuaca_saat_pickup",
-    "volume_hub_kemarin",
-    "volume_hub_7hari",
+    "Janji Hari",
+    "Berat Kg",
+    "Metode Bayar",
+    "Cuaca Saat Pickup",
+    "Volume hub Kemarin",
+    "Volume Hub 7Hari",
 ]
 
 
@@ -132,6 +132,30 @@ def prediksi(payload: dict, tampilkan_cadangan: bool = True) -> dict:
         return prediksi_lokal(payload)
 
 
+def tema_aktif() -> str:
+    """Deteksi tema aktif; fallback ke light jika tidak tersedia."""
+    try:
+        nilai = st.context.theme.type
+    except Exception:
+        nilai = None
+    return "dark" if nilai == "dark" else "light"
+
+
+def gaya_zona(rekom: str, tema: str) -> dict:
+    """Warna dan ikon untuk zona rekomendasi."""
+    if tema == "dark":
+        return {
+            "aman": {"aksen": "#34D399", "latar": "#0F2F25", "teks": "#A7F3D0", "ikon": "✓"},
+            "kabari pelanggan": {"aksen": "#FBBF24", "latar": "#3A2A0A", "teks": "#FDE68A", "ikon": "!"},
+            "prioritaskan": {"aksen": "#F87171", "latar": "#3B1414", "teks": "#FECACA", "ikon": "!"},
+        }[rekom]
+    return {
+        "aman": {"aksen": "#059669", "latar": "#D1FAE5", "teks": "#065F46", "ikon": "✓"},
+        "kabari pelanggan": {"aksen": "#D97706", "latar": "#FEF3C7", "teks": "#92400E", "ikon": "!"},
+        "prioritaskan": {"aksen": "#DC2626", "latar": "#FEE2E2", "teks": "#991B1B", "ikon": "!"},
+    }[rekom]
+
+
 def tampilkan_hasil(hasil: dict) -> None:
     if "error" in hasil:
         st.error(f"Maaf, prediksi gagal: {hasil['error']}")
@@ -140,20 +164,30 @@ def tampilkan_hasil(hasil: dict) -> None:
     probabilitas = float(hasil["probabilitas"])
     rekom = hasil["rekomendasi"]
     st.session_state["probabilitas_mentah"] = probabilitas
+    gaya = gaya_zona(rekom, tema_aktif())
 
-    with st.container(border=True):
-        st.metric("Probabilitas terlambat", f"{probabilitas:.1%}")
-        st.progress(probabilitas, text=f"{probabilitas:.1%}")
-        if rekom == "prioritaskan":
-            st.badge("prioritaskan", color="red")
-            st.error("Prioritaskan paket ini.")
-        elif rekom == "kabari pelanggan":
-            st.badge("kabari pelanggan", color="orange")
-            st.warning("Kabari pelanggan lebih awal.")
-        else:
-            st.badge("aman", color="green")
-            st.success("Aman, tidak perlu dikabari.")
-        st.caption(f"Versi model: {hasil['model_version']}")
+    st.badge(rekom, color={"aman": "green", "kabari pelanggan": "orange", "prioritaskan": "red"}[rekom])
+    st.markdown(
+        f"""
+        <div style="border-left:6px solid {gaya['aksen']}; background:{gaya['latar']};
+                    color:{gaya['teks']}; padding:1rem; border-radius:0.5rem; margin:0.5rem 0;">
+          <div style="display:flex; align-items:center; gap:0.5rem; font-weight:600;">
+            <span style="color:{gaya['aksen']}; font-size:1.25rem;">{gaya['ikon']}</span>
+            <span>{rekom}</span>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:2rem;
+                      font-weight:700; line-height:1.1; margin-top:0.5rem;">
+            {probabilitas:.1%}
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:0.9rem; opacity:0.9;">
+            Probabilitas terlambat
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.progress(probabilitas, text=f"{probabilitas:.1%}")
+    st.caption(f"Versi model: {hasil['model_version']}")
 
 
 def nilai_csv(nilai) -> object:
@@ -186,21 +220,18 @@ with tab_satu:
                 st.markdown("**Paket**")
                 tanggal = st.date_input("Tanggal pickup", value=date(2025, 6, 15))
                 jam = st.slider("Jam pickup", min_value=7, max_value=22, value=9)
-                kota = st.selectbox(
-                    "Kota tujuan",
-                    sorted(set(KOTA_ALIAS.values())),
-                )
+                kota = st.selectbox("Kota tujuan", sorted(set(KOTA_ALIAS.values())))
                 jarak = st.number_input("Jarak dari Bandung (km)", min_value=0.0, max_value=3000.0, value=150.0)
                 transit = st.number_input("Jumlah transit", min_value=0, max_value=10, value=1)
 
             with kanan:
                 st.markdown("**Rute dan layanan**")
-                layanan = st.selectbox("Layanan", ["REG", "EXPRESS", "HEMAT"])
+                layanan = st.selectbox("Layanan", ["Regular", "Express", "Hemat"])
                 janji = st.number_input("Janji tiba (hari)", min_value=1, max_value=14, value=4)
                 berat = st.number_input("Berat (kg)", min_value=0.0, max_value=100.0, value=1.2, step=0.1)
-                metode = st.selectbox("Metode bayar", ["COD", "non_COD"])
+                metode = st.selectbox("Metode bayar", ["COD", "Non COD"])
                 st.markdown("**Kondisi**")
-                cuaca = st.selectbox("Cuaca saat pickup", ["cerah", "berawan", "hujan", "hujan_lebat"])
+                cuaca = st.selectbox("Cuaca saat pickup", ["Cerah", "Berawan", "Hujan", "Hujan Lebat"])
                 volume_kemarin = st.number_input("Volume hub kemarin", min_value=0, max_value=30000, value=5000)
                 volume_7hari = st.number_input("Rata-rata volume hub 7 hari sebelumnya", min_value=0.0, max_value=30000.0, value=5100.0)
 
@@ -211,18 +242,18 @@ with tab_satu:
             st.error("Tanggal pickup belum diisi.")
         else:
             payload = {
-                "tanggal_pickup": tanggal.isoformat(),
-                "jam_pickup": int(jam),
-                "kota_tujuan": kota,
-                "jarak_km": float(jarak),
-                "jumlah_transit": int(transit),
-                "layanan": layanan,
-                "janji_hari": int(janji),
-                "berat_kg": float(berat),
-                "metode_bayar": metode,
-                "cuaca_saat_pickup": cuaca,
-                "volume_hub_kemarin": int(volume_kemarin),
-                "volume_hub_7hari": float(volume_7hari),
+                "Tanggal Pick up": tanggal.isoformat(),
+                "Jam Pick up": int(jam),
+                "Kota Tujuan": kota,
+                "Jarak Km": float(jarak),
+                "Jumlah Transit": int(transit),
+                "Layanan": layanan,
+                "Janji Hari": int(janji),
+                "Berat Kg": float(berat),
+                "Metode Bayar": metode,
+                "Cuaca Saat Pickup": cuaca,
+                "Volume Hub Kemarin": int(volume_kemarin),
+                "Volume Hub 7hari": float(volume_7hari),
             }
             with st.spinner("Menghitung probabilitas..."):
                 tampilkan_hasil(prediksi(payload))
