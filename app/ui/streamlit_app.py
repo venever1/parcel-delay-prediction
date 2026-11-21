@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import warnings
 from datetime import date
 from pathlib import Path
 
@@ -23,11 +24,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app.api.main import PackageInput
-import sys
-from pathlib import Path
-
-# taruh root repo di urutan pertama agar `src` milik proyek ini yang terbaca
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from src.features import KOTA_ALIAS, siapkan_fitur
 
 st.set_page_config(page_title="Prediksi Keterlambatan Paket", layout="wide")
@@ -63,7 +59,7 @@ def api_url() -> str | None:
 
 @st.cache_resource
 def muat_model_cadangan():
-    """Muat model_once saat fallback diperlukan."""
+    """Muat model sekali saat fallback diperlukan."""
     model = joblib.load(ROOT / "artifacts" / "model.joblib")
     metadata = json.loads((ROOT / "artifacts" / "metadata.json").read_text(encoding="utf-8"))
     return model, metadata
@@ -144,15 +140,20 @@ def tampilkan_hasil(hasil: dict) -> None:
     probabilitas = float(hasil["probabilitas"])
     rekom = hasil["rekomendasi"]
     st.session_state["probabilitas_mentah"] = probabilitas
-    st.metric("Probabilitas terlambat", f"{probabilitas:.1%}")
-    st.caption(f"Versi model: {hasil['model_version']}")
 
-    if rekom == "prioritaskan":
-        st.error("Rekomendasi: PRIORITASKAN paket ini.")
-    elif rekom == "kabari pelanggan":
-        st.warning("Rekomendasi: KABARI PELANGGAN lebih awal.")
-    else:
-        st.success("Rekomendasi: AMAN, tidak perlu dikabari.")
+    with st.container(border=True):
+        st.metric("Probabilitas terlambat", f"{probabilitas:.1%}")
+        st.progress(probabilitas, text=f"{probabilitas:.1%}")
+        if rekom == "prioritaskan":
+            st.badge("prioritaskan", color="red")
+            st.error("Prioritaskan paket ini.")
+        elif rekom == "kabari pelanggan":
+            st.badge("kabari pelanggan", color="orange")
+            st.warning("Kabari pelanggan lebih awal.")
+        else:
+            st.badge("aman", color="green")
+            st.success("Aman, tidak perlu dikabari.")
+        st.caption(f"Versi model: {hasil['model_version']}")
 
 
 def nilai_csv(nilai) -> object:
@@ -167,33 +168,43 @@ def nilai_csv(nilai) -> object:
 
 
 st.title("Prediksi Keterlambatan Paket")
-_status_api = api_url() or "tidak dikonfigurasi (mode lokal)"
-st.caption(f"API: {_status_api} | Model: {muat_model_cadangan()[1]['model_version']}")
+st.caption(
+    "Estimasi risiko keterlambatan saat pickup untuk staf layanan pelanggan "
+    "dan operasional hub. Model lebih baik untuk meranking paket daripada "
+    "memutuskan ya/tidak."
+)
+url_api = api_url()
+st.caption(f"API: {url_api or 'tidak dikonfigurasi (mode lokal)'} | Model: {muat_model_cadangan()[1]['model_version']}")
 
 tab_satu, tab_batch = st.tabs(["Prediksi Satu Paket", "Prediksi Batch CSV"])
 
 with tab_satu:
-    with st.form("form_paket"):
-        kiri, kanan = st.columns(2)
-        with kiri:
-            tanggal = st.date_input("Tanggal pickup", value=date(2025, 6, 15))
-            jam = st.slider("Jam pickup", min_value=7, max_value=22, value=9)
-            kota = st.selectbox(
-                "Kota tujuan",
-                sorted(set(KOTA_ALIAS.values())),
-            )
-            jarak = st.number_input("Jarak dari Bandung (km)", min_value=0.0, max_value=3000.0, value=150.0)
-            transit = st.number_input("Jumlah transit", min_value=0, max_value=10, value=1)
-        with kanan:
-            layanan = st.selectbox("Layanan", ["REG", "EXPRESS", "HEMAT"])
-            janji = st.number_input("Janji tiba (hari)", min_value=1, max_value=14, value=4)
-            berat = st.number_input("Berat (kg)", min_value=0.0, max_value=100.0, value=1.2, step=0.1)
-            metode = st.selectbox("Metode bayar", ["COD", "non_COD"])
-            cuaca = st.selectbox("Cuaca saat pickup", ["cerah", "berawan", "hujan", "hujan_lebat"])
-            volume_kemarin = st.number_input("Volume hub kemarin", min_value=0, max_value=30000, value=5000)
-            volume_7hari = st.number_input("Rata-rata volume hub 7 hari sebelumnya", min_value=0.0, max_value=30000.0, value=5100.0)
+    with st.container(border=True):
+        with st.form("form_paket"):
+            kiri, kanan = st.columns(2)
+            with kiri:
+                st.markdown("**Paket**")
+                tanggal = st.date_input("Tanggal pickup", value=date(2025, 6, 15))
+                jam = st.slider("Jam pickup", min_value=7, max_value=22, value=9)
+                kota = st.selectbox(
+                    "Kota tujuan",
+                    sorted(set(KOTA_ALIAS.values())),
+                )
+                jarak = st.number_input("Jarak dari Bandung (km)", min_value=0.0, max_value=3000.0, value=150.0)
+                transit = st.number_input("Jumlah transit", min_value=0, max_value=10, value=1)
 
-        dikirim = st.form_submit_button("Prediksi")
+            with kanan:
+                st.markdown("**Rute dan layanan**")
+                layanan = st.selectbox("Layanan", ["REG", "EXPRESS", "HEMAT"])
+                janji = st.number_input("Janji tiba (hari)", min_value=1, max_value=14, value=4)
+                berat = st.number_input("Berat (kg)", min_value=0.0, max_value=100.0, value=1.2, step=0.1)
+                metode = st.selectbox("Metode bayar", ["COD", "non_COD"])
+                st.markdown("**Kondisi**")
+                cuaca = st.selectbox("Cuaca saat pickup", ["cerah", "berawan", "hujan", "hujan_lebat"])
+                volume_kemarin = st.number_input("Volume hub kemarin", min_value=0, max_value=30000, value=5000)
+                volume_7hari = st.number_input("Rata-rata volume hub 7 hari sebelumnya", min_value=0.0, max_value=30000.0, value=5100.0)
+
+            dikirim = st.form_submit_button("Prediksi")
 
     if dikirim:
         if tanggal is None:
