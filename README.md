@@ -49,7 +49,6 @@ Test dibuka satu kali pada tahap akhir.
 | `jarak_km` kosong | 800 (813 mentah) | Biarkan NaN + flag | Imputasi hanya dari train |
 | `cuaca_saat_pickup` kosong | 400 (406 mentah) | Biarkan NaN + flag | "Tidak diketahui" bermakna; imputasi tunggu train |
 | `berat_kg` tidak wajar | 1.274 (1.286 mentah) | NaN + `flag_berat_invalid` | 81 negatif, 1.205 > 100 kg; kemungkinan gram/salah input |
-| `volume_hub_hari` ekstrem | 2.502 (2.532 mentah) | Flag `> 9000` | Bisa lonjakan nyata; tidak dibuang tanpa bukti |
 | `janji_hari` tidak sesuai layanan | 282 | Flag saja | EXPRESS 1-3, REG 2-4, HEMAT 4-6; bisa SLA khusus |
 | Jam, tanggal, jarak nol/negatif, spasi | 0 | Tidak diubah | Sudah valid; API tetap memvalidasi |
 | Nilai hilang terkait target | jarak 15,9% vs 17,8%; cuaca 19,2% vs 17,8% | Tidak ada penanganan khusus | Selisih tingkat terlambat kecil |
