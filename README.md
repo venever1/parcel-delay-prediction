@@ -46,8 +46,8 @@ Test dibuka satu kali pada tahap akhir.
 | `id_resi` ganda | 1.000 baris / 500 grup | Terhapus bersama duplikat | 0 konflik nilai; tersisa 40.000 id unik |
 | Label `layanan` tidak baku | 589 (812 mentah) | Petakan ke EXPRESS/REG/HEMAT | Hanya beda kapitalisasi/singkatan |
 | Ejaan `kota_tujuan` tidak baku | 1.132 (1.148 mentah) | Petakan dengan daftar alias | 28 ejaan menjadi 15 kota; Bali dipetakan ke Denpasar karena jaraknya identik |
-| `jarak_km` kosong | 800 (813 mentah) | Biarkan NaN + flag | Imputasi hanya dari train |
-| `cuaca_saat_pickup` kosong | 400 (406 mentah) | Biarkan NaN + flag | "Tidak diketahui" bermakna; imputasi tunggu train |
+| `jarak_km` kosong | 800 (813 mentah) | Biarkan NaN + flag | Imputasi median global kolom numerik, di-fit pada train |
+| `cuaca_saat_pickup` kosong | 400 (406 mentah) | Biarkan NaN + flag | "Tidak diketahui" bermakna; diisi modus (`most_frequent`) di-fit pada train |
 | `berat_kg` tidak wajar | 1.274 (1.286 mentah) | NaN + `flag_berat_invalid` | 81 negatif, 1.205 > 100 kg; kemungkinan gram/salah input |
 | `janji_hari` tidak sesuai layanan | 282 | Flag saja | EXPRESS 1-3, REG 2-4, HEMAT 4-6; bisa SLA khusus |
 | Jam, tanggal, jarak nol/negatif, spasi | 0 | Tidak diubah | Sudah valid; API tetap memvalidasi |
@@ -113,6 +113,7 @@ Apr 0,3593, Mei 0,3475, Jun 0,3904.
 - Fitur lag membutuhkan volume hub hari sebelumnya; tanggal awal tidak punya lag.
 - `volume_hub_hari` tidak konstan dalam satu tanggal; median harian dipakai.
 - Data sintetis; interpretasi operasional perlu divalidasi di data nyata.
+- `jarak_km` per kota hampir konstan (variasi sekitar 5% dari rata-rata kota di train), jadi imputasi per kota akan lebih akurat; tidak dipakai karena model sudah dikunci sebelum test.
 
 ## Tautan
 
